@@ -1,0 +1,53 @@
+rivi_id,prio,valmistaja,malli_sovellus,tyyppi,suodatin_sku,suodatin_oem,suodatin_hinta_eur,oljy_spec,oljy_l_suodattimella,oljy_l_ilman,vaihteisto_oljy,vaihteisto_l,vaihtovali_h,oljy_sku_ehdotus,lahde,varmennettu_pvm,varmentaja,tila
+R001,1,Honda,TUNTEMATON - selvita,4T-pera,17.504.12,,13.95,,,,,,,65.082.00,,,,C
+R002,1,Mercury / Honda,EFI 40 / 60,4T-pera,17.504.15,,8.95,,,,,,,65.082.00,,,,A
+R003,1,Suzuki,DF40 / DF50 / DF60 / DF70,4T-pera,17.504.36,,13.95,,,,,,,65.082.00,,,,A
+R004,1,Suzuki,DF8 / DF9.9 / DF15 / DF20,4T-pera,17.504.30,,6.52,,,,,,,65.082.00,,,,A
+R005,1,Tohatsu,TUNTEMATON - selvita,4T-pera,17.504.10,,15.95,,,,,,,65.082.00,,,,C
+R006,1,Yamaha / Honda,5GH-13440-20; Honda 50 hv,4T-pera,17.504.07,5GH-13440-20,11.39,,,,,,,65.082.00,,,,A
+R007,1,Yamaha / Selva,TUNTEMATON - selvita,4T-pera,17.504.03,,11.77,,,,,,,65.082.00,,,,C
+R008,2,Mercury,EFI 80 / 90 / 115,4T-pera,17.504.17,,14.95,,,,,,,65.082.00,,,,A
+R009,2,Mercury,TUNTEMATON - selvita,4T-pera,17.504.05,,14.06,,,,,,,65.082.00,,,,C
+R010,2,Suzuki,DF140,4T-pera,17.504.31,,9.74,,,,,,,65.082.00,,,,A
+R011,2,Suzuki,DF90 / DF100 / DF115,4T-pera,17.504.33,,11.95,,,,,,,65.082.00,,,,A
+R012,2,Suzuki,TUNTEMATON - selvita,4T-pera,17.504.01,,4.74,,,,,,,65.082.00,,,,C
+R013,2,Volvo Penta,D1-13 / D1-20 (huoltosarja),diesel,17.600.06,21189380,48.51,,,,,,,65.085.01,,,,A
+R014,2,Volvo Penta,Huoltosarja OEM 21189380,diesel,17.600.02,21189380,48.76,,,,,,,65.085.01,,,,B
+R015,2,Volvo Penta,Huoltosarja OEM 877194,diesel,17.600.01,877194,49.51,,,,,,,65.085.01,,,,B
+R016,2,Volvo Penta,OEM 3827069 / 21549542,diesel,17.501.17,3827069-21549542,13.14,,,,,,,65.085.01,,,,B
+R017,2,Volvo Penta,OEM 471034,diesel,17.501.05,471034,12.81,,,,,,,65.085.01,,,,B
+R018,2,Volvo Penta,OEM 4785974,diesel,17.501.09,4785974,13.98,,,,,,,65.085.01,,,,B
+R019,2,Volvo Penta,OEM 835440 / 201104 / 32716 (bensiini),bensa-sisapera,17.501.02,835440-201104-32716,11.07,,,,,,,PUUTTUU 25W-40,,,,B
+R020,2,Volvo Penta,OEM 841750 / 41815 (bensiini),bensa-sisapera,17.501.03,841750-41815,8.97,,,,,,,PUUTTUU 25W-40,,,,B
+R021,2,Yamaha,N26-13440-00,4T-pera,17.504.09,N26-13440-00,14.24,,,,,,,65.082.00,,,,A
+R022,2,Yanmar,2GM / 3GM / 3YM (ilmansuodatin),diesel,17.497.01,,16.45,,,,,,,65.085.01,,,,A
+R023,2,Yanmar,OEM 12408535111,diesel,17.501.08,12408535111,10.99,,,,,,,65.085.01,,,,B
+R024,2,Yanmar,OEM 12915035150,diesel,17.501.11,12915035150,10.47,,,,,,,65.085.01,,,,B
+R025,2,Yanmar,OEM 12915035151 / 3,diesel,17.501.12,12915035151/3,9.33,,,,,,,65.085.01,,,,B
+R026,3,Mercury,FourStroke 175-400 hv,4T-pera,17.504.20,35-8MO-123025,11.18,,,,,,,65.082.00,,,,A
+R027,3,Mercury,Verado 4-syl,4T-pera,17.504.19,,8.60,,,,,,,65.082.00,,,,A
+R028,3,Mercury,Verado 6-syl,4T-pera,17.504.21,,8.94,,,,,,,65.082.00,,,,A
+R029,3,Suzuki,DF150 / DF200 / DF225,4T-pera,17.504.35,,10.56,,,,,,,65.082.00,,,,A
+R030,3,Volvo Penta,Huoltosarja OEM 21189422,diesel,17.600.07,21189422,50.97,,,,,,,65.085.01,,,,B
+R031,3,Volvo Penta,Huoltosarja OEM 21189426,diesel,17.600.08,21189426,58.66,,,,,,,65.085.01,,,,B
+R032,3,Volvo Penta,Huoltosarja OEM 877201,diesel,17.600.03,877201,69.79,,,,,,,65.085.01,,,,B
+R033,3,Volvo Penta,Huoltosarja OEM 877202,diesel,17.600.04,877202,79.58,,,,,,,65.085.01,,,,B
+R034,3,Volvo Penta,Huoltosarja OEM 877203,diesel,17.600.05,877203,79.12,,,,,,,65.085.01,,,,B
+R035,3,Volvo Penta,OEM 3517857 / 430143,bensa-sisapera,17.501.06,3517857-430143,8.63,,,,,,,PUUTTUU 25W-40,,,,B
+R036,3,Volvo Penta,OEM 3582732,diesel,17.501.22,3582732,20.98,,,,,,,65.085.01,,,,B
+R037,3,Volvo Penta,OEM 3582733,diesel,17.501.23,3582733,21.56,,,,,,,65.085.01,,,,B
+R038,3,Volvo Penta,OEM 3840525,diesel,17.501.25,3840525,11.66,,,,,,,65.085.01,,,,B
+R039,3,Volvo Penta,OEM 3850559,diesel,17.501.27,3850559,12.95,,,,,,,65.085.01,,,,B
+R040,3,Volvo Penta,OEM 38788490,diesel,17.501.26,38788490,14.77,,,,,,,65.085.01,,,,B
+R041,3,Volvo Penta,OEM 847741,diesel,17.501.18,847741,24.13,,,,,,,65.085.01,,,,B
+R042,3,Volvo Penta,OEM 861473,diesel,17.501.24,861473,13.92,,,,,,,65.085.01,,,,B
+R043,3,Volvo Penta,OEM 8692305,diesel,17.501.20,8692305,12.96,,,,,,,65.085.01,,,,B
+R044,3,Yanmar,3JH / 4J (ilmansuodatin),diesel,17.497.03,,23.90,,,,,,,65.085.01,,,,A
+R045,3,Yanmar,OEM 12769535150,diesel,17.501.13,12769535150,24.30,,,,,,,65.085.01,,,,B
+R046,3,Yanmar,TUNTEMATON - selvita (oljynsuodatin),diesel,17.501.33,,28.90,,,,,,,65.085.01,,,,C
+R047,4,Volvo Penta,D4 / D6 (polttoainesuodatin),diesel,17.502.07,24215091,26.10,,,,,,,65.085.01,,,,A
+R048,4,Volvo Penta,Huoltosarja OEM 21105842,diesel,17.600.09,21105842,102.73,,,,,,,65.085.01,,,,B
+R049,4,Volvo Penta,Huoltosarja OEM 21759184,diesel,17.600.10,21759184,105.72,,,,,,,65.085.01,,,,B
+R050,4,Volvo Penta,IPS-vetolaite,diesel,17.501.41,,47.07,,,,,,,65.085.01,,,,A
+R051,4,Volvo Penta,MD30 - TAMD103P-A (oljyn poistosuodatin),diesel,17.503.00,876069-6,28.73,,,,,,,65.085.01,,,,A
+R052,4,Yanmar,6L (ilmansuodatin),diesel,17.497.05,,12.32,,,,,,,65.085.01,,,,A
