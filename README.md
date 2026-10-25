@@ -293,6 +293,15 @@ Järjestelmä on suunniteltu laajennettavaksi:
 - **Calendly** — tuo asiakastapaamisten vaikutus analyysiin
 - **Email-ilmoitukset** — lisää SMTP-konfiguraatio `config.py`:hyn
 - **Slack-ilmoitukset** — lisää Slack webhook red-statukselle
+- **WhatsApp-ilmoitukset** — `whatsapp_client.py` lähettää yellow/red-raportin
+  WhatsApp Business -numerosta (Cloud API) `WHATSAPP_ALERT_RECIPIENTS`-numeroihin.
+  Yrityksen aloittama viesti vaatii Metan hyväksymän viestipohjan
+  (`WHATSAPP_REPORT_TEMPLATE`, 4 paikkaa: päivä, status, yhteenveto, linkki);
+  ilman pohjaa viesti menee vain jos vastaanottaja on kirjoittanut numeroon
+  viimeisen 24 h sisällä. Sama numero ja token kuin asiakaspalvelun
+  WhatsApp-webhookilla, ks. `schooner-supabase/docs/whatsapp/README.md`.
+  Pikasyöttö toimii myös WhatsAppilla: sisäisestä numerosta lähetetty viesti
+  laukaisee `quick-capture`-workflowin (`client_payload.source = "whatsapp"`).
 - **Varastoriskit** — integroi Osculati FTP -datan kanssa
 - **Viikonpäiväkohtainen vertailu** — kerää enemmän dataa → tarkempi analyysi
 
