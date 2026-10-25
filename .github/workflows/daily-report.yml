@@ -53,6 +53,11 @@ jobs:
           TIMEZONE:              Europe/Helsinki
           SLACK_WEBHOOK_URL:     ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_NOTIFY_GREEN:    ${{ secrets.SLACK_NOTIFY_GREEN }}
+          WHATSAPP_ACCESS_TOKEN:     ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID:  ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_ALERT_RECIPIENTS: ${{ secrets.WHATSAPP_ALERT_RECIPIENTS }}
+          WHATSAPP_REPORT_TEMPLATE:  ${{ secrets.WHATSAPP_REPORT_TEMPLATE }}
+          WHATSAPP_NOTIFY_GREEN:     ${{ secrets.WHATSAPP_NOTIFY_GREEN }}
           ALERT_EMAIL:           ${{ secrets.ALERT_EMAIL }}
           SMTP_HOST:             smtp.gmail.com
           SMTP_PORT:             587

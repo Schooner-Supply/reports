@@ -144,6 +144,20 @@ SLACK_WEBHOOK_URL  = os.getenv("SLACK_WEBHOOK_URL", "")
 # "true" = lähetetään myös green-raportit Slackiin
 SLACK_NOTIFY_GREEN = os.getenv("SLACK_NOTIFY_GREEN", "false")
 
+# ── WhatsApp (Cloud API) ──────────────────────────────────────────────────────
+# Sama Meta-sovellus ja numero kuin asiakaspalvelun whatsapp-webhookilla
+# (schooner-supabase). Yrityksen aloittama viesti vaatii hyväksytyn pohjan,
+# ks. whatsapp_client.py.
+
+WHATSAPP_ACCESS_TOKEN     = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID  = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
+# Vastaanottajat pilkuilla, E.164 (+358401234567)
+WHATSAPP_ALERT_RECIPIENTS = os.getenv("WHATSAPP_ALERT_RECIPIENTS", "")
+WHATSAPP_REPORT_TEMPLATE  = os.getenv("WHATSAPP_REPORT_TEMPLATE", "")
+WHATSAPP_TEMPLATE_LANG    = os.getenv("WHATSAPP_TEMPLATE_LANG", "fi")
+# "true" = lähetetään myös green-raportit WhatsAppiin
+WHATSAPP_NOTIFY_GREEN     = os.getenv("WHATSAPP_NOTIFY_GREEN", "false")
+
 # ── Sähköposti ────────────────────────────────────────────────────────────────
 
 ALERT_EMAIL       = os.getenv("ALERT_EMAIL", "")

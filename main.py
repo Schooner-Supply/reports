@@ -282,6 +282,19 @@ def run(report_date: date, dry_run: bool = False, force: bool = False) -> int:
                     alerts_count=len(result.alerts),
                 )
 
+            # ── 8a2. WhatsApp-ilmoitus ────────────────────────────────────────
+            if config.WHATSAPP_ACCESS_TOKEN and config.WHATSAPP_ALERT_RECIPIENTS:
+                log.info("Lähetetään WhatsApp-ilmoitus...")
+                from whatsapp_client import send_report_notification as send_whatsapp_notification
+                send_whatsapp_notification(
+                    report_date=report_date,
+                    status_level=result.status_level,
+                    summary_lines=summary_lines,
+                    recommendation=result.recommendation,
+                    clickup_url=clickup_task_url,
+                    alerts_count=len(result.alerts),
+                )
+
             # ── 8b. Sähköposti-ilmoitus ───────────────────────────────────────
             if config.ALERT_EMAIL and config.SMTP_HOST:
                 log.info("Lähetetään sähköposti-ilmoitus...")
