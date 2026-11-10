@@ -117,6 +117,11 @@
       "Bash(bun run typecheck)",
       "Bash(bun install)",
       "Bash(bunx vitest *)",
+      "Bash(npx wrangler deploy *)",
+      "Bash(wrangler deploy *)",
+      "Bash(npx supabase functions deploy *)",
+      "Bash(supabase functions deploy *)",
+      "mcp__Supabase__deploy_edge_function",
       "Bash(npx wrangler dev *)",
       "Bash(npx wrangler versions upload *)",
       "Bash(npx wrangler whoami)",
@@ -219,6 +224,7 @@
       "mcp__Supabase__search_docs",
       "mcp__Supabase__generate_typescript_types",
       "mcp__Supabase__execute_sql",
+      "mcp__Supabase__apply_migration",
       "mcp__Supabase__list_branches",
       "mcp__Supabase__create_branch",
       "mcp__Supabase__rebase_branch",
@@ -247,6 +253,7 @@
       "mcp__Shopify__show-collective-products",
       "mcp__Shopify__search-collective-product-candidates",
       "mcp__Shopify__test-digital-products-connection",
+      "mcp__Shopify__graphql_mutation",
       "mcp__Google_Drive__search_files",
       "mcp__Google_Drive__read_file_content",
       "mcp__Google_Drive__download_file_content",
@@ -482,12 +489,10 @@
       "mcp__Lovable__set_folder_visibility",
       "mcp__Shopify__publish-digital-product",
       "mcp__Shopify__bulk-update-product-status",
-      "mcp__Supabase__apply_migration",
       "mcp__Supabase__merge_branch",
       "mcp__Supabase__pause_project",
       "mcp__Supabase__restore_project",
       "mcp__Supabase__delete_branch",
-      "mcp__Shopify__graphql_mutation",
       "mcp__Lovable__deploy_project",
       "mcp__Vercel__request_promote",
       "mcp__Vercel__request_rollback",
@@ -499,8 +504,6 @@
       "mcp__github__push_files",
       "mcp__github__create_or_update_file",
       "mcp__github__delete_file",
-      "Bash(npx wrangler deploy *)",
-      "Bash(wrangler deploy *)",
       "Bash(npx wrangler delete *)",
       "Bash(wrangler delete *)",
       "Bash(npx supabase db push *)",
@@ -509,8 +512,6 @@
       "Bash(supabase migration up *)",
       "Bash(npx supabase db reset --linked *)",
       "Bash(supabase db reset --linked *)",
-      "Bash(npx supabase functions deploy *)",
-      "Bash(supabase functions deploy *)",
       "Bash(vercel --prod *)",
       "Bash(vercel deploy --prod *)",
       "Bash(npx vercel --prod *)",
@@ -566,13 +567,13 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|mcp__Supabase__execute_sql|mcp__Lovable__query_database|mcp__github__actions_run_trigger",
+        "matcher": "Bash|mcp__Supabase__execute_sql|mcp__Supabase__apply_migration|mcp__Shopify__graphql_mutation|mcp__Lovable__query_database|mcp__github__actions_run_trigger",
         "hooks": [
           {
             "type": "command",
             "command": "python3 \"$HOME/.claude/hooks/guard.py\"",
-            "timeout": 10,
-            "statusMessage": "Tarkistetaan poikkeuslista (raha, viestintä, DROP, force push)…"
+            "timeout": 180,
+            "statusMessage": "Tarkistetaan poikkeuslista (raha, viestintä, DROP, force push, tuotantodeploy)…"
           }
         ]
       }

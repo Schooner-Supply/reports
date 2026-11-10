@@ -9,7 +9,10 @@ Lukee hook-syötteen stdinistä ja palauttaa permissionDecision "ask"
     kirjoitus auth-/vault-skeemaan, GRANT/REVOKE, migraatiot tuotantoon)
   - salaisuuksien käsittely (secret set, env add, .env)
   - git push --force tai push päähaaraan
-  - deploy tuotantoon (wrangler deploy, vercel --prod, supabase db push)
+  - Shopify-mutaatio, joka poistaa tai muuttaa hintoja massana
+  - deploy tuotantoon (wrangler deploy ilman --env staging, vercel --prod,
+    supabase db push) – wrangler-tuotantodeploy sallitaan automaattisesti,
+    jos repon testit ovat vihreät (node scripts/test.mjs / npm test / pytest)
 Muuten ei tee mitään (permissions.allow / defaultMode päättää).
 """
 import json
@@ -34,6 +37,54 @@ def ask(reason):
         }
     }))
     sys.exit(0)
+
+
+def tests_green():
+    """Ajaa repon testit; palauttaa (ok, viesti). Ensimmäinen löytyvä:
+    scripts/test.mjs -> npm test (jos package.json:ssa on test) -> pytest."""
+    import os
+    import subprocess
+    root = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    cmd = None
+    if os.path.exists(os.path.join(root, "scripts", "test.mjs")):
+        cmd = ["node", "scripts/test.mjs"]
+    elif os.path.exists(os.path.join(root, "package.json")):
+        try:
+            pkg = json.load(open(os.path.join(root, "package.json")))
+            if "test" in (pkg.get("scripts") or {}):
+                cmd = ["npm", "test", "--silent"]
+        except Exception:
+            pass
+    if cmd is None and os.path.isdir(os.path.join(root, "tests")):
+        cmd = ["python3", "-m", "pytest", "-q", "tests"]
+    if cmd is None:
+        return False, "repossa ei ole testejä (scripts/test.mjs, npm test tai tests/)"
+    try:
+        r = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=150)
+    except Exception as e:  # puuttuva työkalu, timeout
+        return False, "testien ajo epäonnistui: %s" % e
+    if r.returncode == 0:
+        return True, "testit vihreät"
+    tail = (r.stdout + r.stderr).strip().splitlines()[-6:]
+    return False, "testit punaiset:\n" + "\n".join(tail)
+
+
+def shopify_reason(q, variables):
+    """Shopify-mutaatio: poistot ja hintojen massamuutokset vaativat vahvistuksen."""
+    text = str(q)
+    blob = (text + " " + json.dumps(variables, ensure_ascii=False)).lower()
+    m = re.search(r"\b(\w*(delete|bulkdelete)\w*)\s*\(", text, re.I)
+    if m:
+        return "poistomutaatio " + m.group(1)
+    if re.search(r"\bbulkoperationrunmutation\b", blob):
+        return "bulkOperationRunMutation (massaoperaatio)"
+    if re.search(r"\bpricelist\w*(add|update|delete)\w*\s*\(", text, re.I):
+        return "hinnaston massamuutos"
+    if re.search(r"\bproductvariantsbulkupdate\b", blob) and re.search(r"\b(price|compareatprice)\b", blob):
+        return "productVariantsBulkUpdate muuttaa hintoja massana"
+    if re.search(r"\b(productvariantsbulkcreate|inventoryadjustquantities|inventorysetquantities)\b", blob) and re.search(r"\bprice\b", blob):
+        return "massahinnoittelu"
+    return None
 
 
 def sql_reason(sql):
@@ -63,18 +114,27 @@ def sql_reason(sql):
 
 
 # ---------- SQL-työkalut (Supabase, Lovable) ----------
-if tool in ("mcp__Supabase__execute_sql", "mcp__Lovable__query_database"):
+if tool in ("mcp__Supabase__execute_sql", "mcp__Supabase__apply_migration", "mcp__Lovable__query_database"):
     sql = inp.get("query") or inp.get("sql") or ""
     r = sql_reason(str(sql))
     if r:
         ask("Tuhoava tai arkaluonteinen kantamuutos – " + r)
     sys.exit(0)
 
+# ---------- Shopify-mutaatiot ----------
+if tool == "mcp__Shopify__graphql_mutation":
+    r = shopify_reason(inp.get("mutation") or inp.get("query") or "", inp.get("variables") or {})
+    if r:
+        ask("Shopify-mutaatio vaatii vahvistuksen – " + r)
+    sys.exit(0)
+
 # ---------- GitHub Actions -käynnistys ----------
 if tool == "mcp__github__actions_run_trigger":
     wf = str(inp.get("workflow_id") or inp.get("workflowId") or inp.get("workflow") or "")
-    if re.search(r"deploy|release|prod", wf, re.I):
-        ask("Tuotantodeploy GitHub Actionsista: " + wf)
+    if re.search(r"deploy|release|prod", wf, re.I) and not re.search(r"staging|preview|test", wf, re.I):
+        ok, msg = tests_green()
+        if not ok:
+            ask("Tuotantodeploy GitHub Actionsista (%s), %s" % (wf, msg))
     sys.exit(0)
 
 # ---------- Bash ----------
@@ -102,14 +162,18 @@ if tool == "Bash":
         ask("Tuhoava git-komento (reset --hard / branch -D / clean -f)")
 
     # Deploy tuotantoon
-    if re.search(r"\bwrangler\s+deploy\b", c):
-        ask("wrangler deploy julkaisee Workerin tuotantoon")
+    if re.search(r"\bwrangler\s+deploy\b", c) and not re.search(r"(--env|-e)[\s=]+(staging|preview|test)\b", c):
+        ok, msg = tests_green()
+        if not ok:
+            ask("wrangler deploy julkaisee Workerin tuotantoon, " + msg)
     if re.search(r"\bvercel\b.*(--prod|--production)", c) or re.search(r"\bvercel\s+promote\b|\bvercel\s+rollback\b", c):
         ask("Vercel tuotantodeploy/promote")
-    if re.search(r"\bsupabase\s+(db\s+push|migration\s+up|db\s+reset\s+--linked|functions\s+deploy|secrets\s+set)", c):
+    if re.search(r"\bsupabase\s+(db\s+push|migration\s+up|db\s+reset\s+--linked|secrets\s+set)", c):
         ask("Supabase-muutos linkitettyyn (tuotanto)projektiin")
-    if re.search(r"\bgh\s+workflow\s+run\b.*(deploy|release|prod)", c):
-        ask("Tuotantodeploy GitHub Actionsista")
+    if re.search(r"\bgh\s+workflow\s+run\b.*(deploy|release|prod)", c) and not re.search(r"staging|preview", c):
+        ok, msg = tests_green()
+        if not ok:
+            ask("Tuotantodeploy GitHub Actionsista, " + msg)
 
     # Salaisuudet
     if re.search(r"\b(gh\s+secret\s+set|wrangler\s+secret\s+(put|bulk)|vercel\s+env\s+(add|rm|pull)|supabase\s+secrets|doppler\s+secrets\s+set|op\s+item\s+(create|edit))\b", c):
