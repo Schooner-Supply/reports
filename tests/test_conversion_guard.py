@@ -66,3 +66,63 @@ def test_build_query_quotes_countries():
     q = cg.build_query(date(2026, 11, 8), date(2026, 11, 15), ["Finland", "Åland Islands"])
     assert "session_country IN ('Finland', 'Åland Islands')" in q
     assert "SINCE 2026-11-08 UNTIL 2026-11-15" in q
+
+
+# ── Liikenne maittain/kanavittain (lisätty 16.11.2026) ───────────────────────
+
+from conversion_guard import SegRow, build_traffic_query, judge_traffic, parse_traffic_rows  # noqa: E402
+
+
+def _seg(day, country, source, per_day, days=7):
+    """Tasainen historia: per_day sessiota joka päivä 7 pv ennen `day`."""
+    return [SegRow(day - timedelta(days=i), country, source, per_day) for i in range(1, days + 1)]
+
+
+def test_traffic_red_when_country_channel_drops_over_40_percent():
+    d = date(2026, 11, 12)
+    rows = _seg(d, "Finland", "search", 50) + _seg(d, "Finland", "direct", 40)
+    rows += [SegRow(d, "Finland", "search", 11), SegRow(d, "Finland", "direct", 41)]
+    status, lines = judge_traffic(d, rows)
+    assert status == "red"
+    assert "Finland × search 11 vs ka 50 (−78 %)" in lines[0]
+    assert "kanava search" in lines[0]
+    assert "direct" not in lines[0].split(";")[0]  # direct ei pudonnut
+
+
+def test_traffic_green_when_within_threshold():
+    d = date(2026, 11, 12)
+    rows = _seg(d, "Finland", "search", 50) + [SegRow(d, "Finland", "search", 35)]  # −30 %
+    status, lines = judge_traffic(d, rows)
+    assert status == "green"
+    assert any(l.startswith("Finland: 35 sessiota") for l in lines)
+
+
+def test_traffic_ignores_thin_segments():
+    d = date(2026, 11, 12)
+    rows = _seg(d, "Sweden", "social", 3)  # ka 3/pv, putoaa nollaan — kohinaa
+    status, _ = judge_traffic(d, rows)
+    assert status == "green"
+
+
+def test_traffic_missing_day_counts_as_zero():
+    d = date(2026, 11, 12)
+    rows = _seg(d, "Finland", "search", 70)  # tänään ei riviä = 0 sessiota
+    status, lines = judge_traffic(d, rows)
+    assert status == "red"
+    assert "−100 %" in lines[0]
+
+
+def test_traffic_yellow_when_history_short():
+    d = date(2026, 11, 12)
+    rows = _seg(d, "Finland", "search", 50, days=2)
+    status, lines = judge_traffic(d, rows)
+    assert status == "yellow"
+
+
+def test_parse_traffic_rows_and_query():
+    table = {"columns": [{"name": "day"}, {"name": "session_country"}, {"name": "referrer_source"}, {"name": "sessions"}],
+             "rows": [["2026-11-13", "Finland", "search", "16"], {"day": "2026-11-13", "session_country": "Sweden", "referrer_source": "direct", "sessions": 4}]}
+    rows = parse_traffic_rows(table)
+    assert [(r.country, r.source, r.sessions) for r in rows] == [("Finland", "search", 16), ("Sweden", "direct", 4)]
+    q = build_traffic_query(date(2026, 11, 5), date(2026, 11, 12), ["Finland", "Åland Islands"])
+    assert "GROUP BY session_country, referrer_source" in q and "'Åland Islands'" in q and "TIMESERIES day" in q
