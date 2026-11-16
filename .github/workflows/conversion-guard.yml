@@ -7,7 +7,10 @@ name: Konversiovartija (Shopify-data)
 #
 # Päivittäin: eilisen korilisäykset/sessio ja tilaukset/sessio Pohjoismaissa
 # verrattuna edeltävän 7 päivän liukuvaan keskiarvoon. Pudotus yli 50 % →
-# punainen → WhatsApp-push (sama Cloud API ja pohja kuin päiväraportissa).
+# punainen. Lisäksi (16.11.2026, VARTIJA 4:n konversio-osa) sessiot maittain,
+# kanavittain ja maa×kanava vs 7 pv päiväkeskiarvo: pudotus yli 40 % → punainen.
+# Punainen → sähköposti (ALERT_EMAIL) ja WhatsApp-push kun tunnukset ovat
+# paikallaan (sama Cloud API ja pohja kuin päiväraportissa).
 # Ks. conversion_guard.py — siellä myös miksi vain Pohjoismaat (bottiliikenne).
 #
 # Vaatii teemasovelluksen Shopify-sovellukselta read_reports-oikeuden
@@ -23,7 +26,7 @@ on:
         required: false
         default: ""
       dry_run:
-        description: "Älä lähetä WhatsApp-pushia"
+        description: "Älä lähetä sähköpostia eikä WhatsApp-pushia"
         type: boolean
         default: false
 
@@ -52,6 +55,13 @@ jobs:
           CLICKUP_API_KEY:       ${{ secrets.CLICKUP_API_KEY }}
           CLICKUP_LIST_ID:       ${{ secrets.CLICKUP_LIST_ID }}
           TIMEZONE:              Europe/Helsinki
+          # Sähköposti on pääkanava kunnes WhatsApp-tunnukset ovat paikallaan
+          # (samat SMTP-secretit kuin daily-report.yml:ssä).
+          ALERT_EMAIL:           ${{ secrets.ALERT_EMAIL }}
+          SMTP_HOST:             smtp.gmail.com
+          SMTP_PORT:             587
+          SMTP_USER:             ${{ secrets.SMTP_USER }}
+          SMTP_PASS:             ${{ secrets.SMTP_PASS }}
           WHATSAPP_ACCESS_TOKEN:     ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
           WHATSAPP_PHONE_NUMBER_ID:  ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
           WHATSAPP_ALERT_RECIPIENTS: ${{ secrets.WHATSAPP_ALERT_RECIPIENTS }}

@@ -10,8 +10,16 @@ Mitä mitataan (ShopifyQL, sessions-taulu):
   - korilisäyksiä per sessio  (sessions_with_cart_additions / sessions)
   - tilauksia per sessio       (sessions_that_completed_checkout / sessions)
 Eilinen verrataan sitä edeltävän seitsemän päivän liukuvaan keskiarvoon.
-Pudotus yli 50 % → punainen → WhatsApp-push (sama Cloud API kuin
-päiväraportissa). Molemmat suhteet raportoidaan aina lokiin.
+Pudotus yli 50 % → punainen. Molemmat suhteet raportoidaan aina lokiin.
+
+Lisäksi (16.11.2026, vartija 4:n konversio-osa) sessiot maittain, kanavittain
+(referrer_source) ja maa×kanava verrattuna edeltävän 7 päivän päiväkeskiarvoon:
+pudotus yli 40 % → punainen. 12.11.2026 Pohjoismaiden Google-liikenne putosi
+~80 % yhdessä päivässä eikä mikään hälyttänyt. Ohuet segmentit (alle
+GUARD_TRAFFIC_MIN_AVG sessiota/pv) eivät hälytä.
+
+Punainen → sähköposti (email_client.py, ALERT_EMAIL + SMTP_*) ja WhatsApp-push
+(whatsapp_client.py) — kumpikin vain jos sen tunnukset ovat paikallaan.
 
 Miksi vain Pohjoismaat (Finland, Sweden, Norway, Denmark, Åland Islands):
 1.–16.11.2026 kaupan sessioista 3 527 tuli Yhdysvalloista ja 528 Brasiliasta,
@@ -27,6 +35,9 @@ WHATSAPP_* kuten whatsapp_client.py:ssä. Valinnaiset:
   GUARD_MIN_SESSIONS     oletus 30   (alle tämän eilisen luku on liian ohut
                                      hälytykseen; raportoidaan keltaisena)
   GUARD_COUNTRIES        oletus "Finland,Sweden,Norway,Denmark,Åland Islands"
+  GUARD_TRAFFIC_THRESHOLD oletus 0.4 (40 % pudotus maa/kanava-sessioissa)
+  GUARD_TRAFFIC_MIN_AVG   oletus 10  (segmentin 7 pv keskiarvo alle tämän → ei hälytystä)
+  ALERT_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS (sähköposti)
 
 Käyttö:  python conversion_guard.py [--date YYYY-MM-DD] [--dry-run]
 Paluuarvo 0 = normaali/keltainen, 1 = punainen (hälytys), 3 = dataa ei saatu.
@@ -167,13 +178,14 @@ def build_query(start: date, end: date, countries: list[str]) -> str:
 
 # ── Verkko ─────────────────────────────────────────────────────────────────────
 
-def fetch_rows(start: date, end: date, countries: list[str]) -> list[DayRow]:
+def _shopifyql(query: str) -> dict:
+    """Ajaa ShopifyQL-kyselyn Admin GraphQL:n shopifyqlQuery-kentällä ja palauttaa tableDatan."""
     import config
     from shopify_client import _get_access_token
 
     gql = """query($q: String!) { shopifyqlQuery(query: $q) { tableData { columns { name dataType } rows } parseErrors } }"""
     url = f"https://{config.SHOPIFY_SHOP}/admin/api/{config.SHOPIFY_API_VERSION}/graphql.json"
-    resp = requests.post(url, json={"query": gql, "variables": {"q": build_query(start, end, countries)}},
+    resp = requests.post(url, json={"query": gql, "variables": {"q": query}},
                          headers={"X-Shopify-Access-Token": _get_access_token()}, timeout=60)
     resp.raise_for_status()
     body = resp.json()
@@ -183,7 +195,107 @@ def fetch_rows(start: date, end: date, countries: list[str]) -> list[DayRow]:
     data = (body.get("data") or {}).get("shopifyqlQuery") or {}
     if data.get("parseErrors"):
         raise RuntimeError(f"ShopifyQL parse: {data['parseErrors']}")
-    return parse_shopifyql_rows(data.get("tableData") or {})
+    return data.get("tableData") or {}
+
+
+def fetch_rows(start: date, end: date, countries: list[str]) -> list[DayRow]:
+    return parse_shopifyql_rows(_shopifyql(build_query(start, end, countries)))
+
+
+# ── Liikenne maittain ja kanavittain (VARTIJA 4:n konversio-osa) ─────────────
+#
+# 12.11.2026 Pohjoismaiden Google-liikenne putosi ~80 % yhdessä päivässä eikä
+# mikään hälyttänyt. Tämä vertaa eilisen sessioita maittain, kanavittain
+# (referrer_source: search, direct, social, email, …) ja maa×kanava edeltävän
+# 7 päivän päiväkeskiarvoon. Pudotus yli 40 % → punainen. Ohuet segmentit
+# (keskiarvo alle GUARD_TRAFFIC_MIN_AVG sessiota/pv, oletus 10) eivät hälytä:
+# kahden session kanavan putoaminen nollaan on kohinaa, ei poikkeama.
+
+DEFAULT_TRAFFIC_THRESHOLD = 0.4
+DEFAULT_TRAFFIC_MIN_AVG = 10
+
+
+@dataclass
+class SegRow:
+    day: date
+    country: str
+    source: str
+    sessions: int
+
+
+def build_traffic_query(start: date, end: date, countries: list[str]) -> str:
+    quoted = ", ".join("'" + c.replace("'", "''") + "'" for c in countries)
+    return (
+        "FROM sessions SHOW sessions "
+        f"WHERE session_country IN ({quoted}) "
+        "GROUP BY session_country, referrer_source "
+        f"TIMESERIES day SINCE {start.isoformat()} UNTIL {end.isoformat()}"
+    )
+
+
+def parse_traffic_rows(table: dict) -> list[SegRow]:
+    cols = [c["name"] for c in table.get("columns", [])]
+    out: list[SegRow] = []
+    for r in table.get("rows") or []:
+        if isinstance(r, list):
+            r = dict(zip(cols, r))
+        day = str(r.get("day") or r.get("Day") or "")[:10]
+        if not day:
+            continue
+        out.append(SegRow(day=date.fromisoformat(day), country=str(r.get("session_country") or "?"),
+                          source=str(r.get("referrer_source") or "unknown"),
+                          sessions=int(float(r.get("sessions") or 0))))
+    return out
+
+
+def judge_traffic(day: date, rows: list[SegRow], threshold: float = DEFAULT_TRAFFIC_THRESHOLD,
+                  min_avg: float = DEFAULT_TRAFFIC_MIN_AVG) -> tuple[str, list[str]]:
+    """Palauttaa (status, rivit). Segmentit: maa, kanava, maa×kanava.
+    Vertailu = edeltävien 7 kalenteripäivän keskiarvo (puuttuva päivä = 0)."""
+    hist_days = [day - timedelta(days=i) for i in range(1, 8)]
+    present_days = {r.day for r in rows if r.day < day}
+    if len(present_days & set(hist_days)) < 3:
+        return "yellow", ["Liikenteen vertailudataa alle 3 päivältä — ei maa/kanava-hälytystä."]
+
+    seg: dict[str, dict[date, int]] = {}
+    for r in rows:
+        for key in (f"maa {r.country}", f"kanava {r.source}", f"{r.country} × {r.source}"):
+            seg.setdefault(key, {})
+            seg[key][r.day] = seg[key].get(r.day, 0) + r.sessions
+
+    alerts, info = [], []
+    for key in sorted(seg):
+        today = seg[key].get(day, 0)
+        avg = sum(seg[key].get(d, 0) for d in hist_days) / 7
+        if key.startswith("maa "):
+            info.append(f"{key[4:]}: {today} sessiota vs 7 pv ka {avg:.0f}.")
+        if avg < min_avg:
+            continue
+        drop = (avg - today) / avg
+        if drop > threshold:
+            alerts.append(f"{key} {today} vs ka {avg:.0f} (−{drop * 100:.0f} %)")
+    if alerts:
+        return "red", [f"LIIKENNEPUDOTUS (raja {threshold * 100:.0f} % vs 7 pv ka): " + "; ".join(alerts)] + info
+    return "green", info
+
+
+def fetch_traffic_rows(start: date, end: date, countries: list[str]) -> list[SegRow]:
+    return parse_traffic_rows(_shopifyql(build_traffic_query(start, end, countries)))
+
+
+def send_email(v: Verdict, run_url: Optional[str]) -> bool:
+    """Sähköposti (email_client.py, samat SMTP-secretit kuin päiväraportissa).
+    Väliaikainen pääkanava kunnes WhatsApp-tunnukset ovat paikallaan."""
+    from email_client import send_report_email
+    text = "Konversio- ja liikennevartija\n\n" + "\n".join(v.lines)
+    if run_url:
+        text += f"\n\nAjo: {run_url}"
+    return send_report_email(
+        report_date=v.day, status_level=v.status, report_text=text,
+        summary_lines=["Konversiovartija: " + v.lines[0]] + v.lines[1:4],
+        recommendation="Tarkista evästebanneri/ostonappi, hakunäkyvyys (SEO-vartija) ja Actions-ajo.",
+        clickup_url=run_url, alerts_count=1,
+    )
 
 
 def send_push(v: Verdict, run_url: Optional[str]) -> bool:
@@ -202,7 +314,7 @@ def send_push(v: Verdict, run_url: Optional[str]) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", help="tarkasteltava päivä (oletus eilen, Europe/Helsinki)")
-    ap.add_argument("--dry-run", action="store_true", help="ei WhatsApp-lähetystä")
+    ap.add_argument("--dry-run", action="store_true", help="ei sähköposti- eikä WhatsApp-lähetystä")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -227,6 +339,22 @@ def main() -> int:
         return 3
 
     v = judge(today, history, threshold, min_sessions)
+
+    t_threshold = float(os.getenv("GUARD_TRAFFIC_THRESHOLD") or DEFAULT_TRAFFIC_THRESHOLD)
+    t_min_avg = float(os.getenv("GUARD_TRAFFIC_MIN_AVG") or DEFAULT_TRAFFIC_MIN_AVG)
+    try:
+        t_status, t_lines = judge_traffic(day, fetch_traffic_rows(day - timedelta(days=7), day, countries),
+                                          t_threshold, t_min_avg)
+    except Exception as e:  # noqa: BLE001 — konversio-osa raportoidaan silti
+        t_status, t_lines = "yellow", [f"Liikennedata maa/kanava ei saatavilla: {e}"]
+    if t_status == "red":
+        v.status = "red"
+        v.lines.insert(0, t_lines[0])
+        v.lines.extend(t_lines[1:])
+    else:
+        v.lines.extend(t_lines)
+        if t_status == "yellow" and v.status == "green":
+            v.status = "yellow"
     for line in v.lines:
         log.info(line)
     print(f"STATUS={v.status}")
@@ -239,11 +367,17 @@ def main() -> int:
 
     if v.status == "red":
         if a.dry_run:
-            log.info("dry-run: WhatsApp-push ohitettu")
+            log.info("dry-run: sähköposti ja WhatsApp-push ohitettu")
         else:
             run_url = None
             if os.getenv("GITHUB_SERVER_URL") and os.getenv("GITHUB_REPOSITORY") and os.getenv("GITHUB_RUN_ID"):
                 run_url = f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+            try:
+                mailed = send_email(v, run_url)
+            except Exception as e:  # noqa: BLE001
+                log.error("Sähköposti epäonnistui: %s", e)
+                mailed = False
+            log.info("Sähköposti %s", "lähetetty" if mailed else "EI lähtenyt (ALERT_EMAIL/SMTP_* puuttuu tai virhe)")
             sent = send_push(v, run_url)
             log.info("WhatsApp-push %s", "lähetetty" if sent else "EI lähtenyt (ks. loki)")
         return 1
